@@ -1,0 +1,21 @@
+{
+  "name": "vehicle-fleet-ddd-cqrs",
+  "version": "1.0.0",
+  "description": "This is a work in progress as I move along with this project",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "cucumber-js",
+    "test:critical": "cucumber-js --tags @critical",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@cucumber/cucumber": "^12.9.0",
+    "@types/node": "^25.9.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}
