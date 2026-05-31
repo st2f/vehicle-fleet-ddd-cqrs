@@ -7,11 +7,14 @@
   "scripts": {
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
+    "lint": "eslint .",
     "test": "cucumber-js",
     "test:critical": "cucumber-js --tags @critical",
     "test:postgres": "cucumber-js --profile postgres",
     "test:postgres:colima": "DOCKER_HOST=unix://$HOME/.colima/default/docker.sock TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock cucumber-js --profile postgres",
     "test:postgres:colima:html": "mkdir -p reports && DOCKER_HOST=unix://$HOME/.colima/default/docker.sock TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock cucumber-js --profile postgres --format html:reports/postgres-colima.html",
+    "quality": "npm run lint && npm run typecheck && npm test",
+    "quality:ci": "npm run lint && npm run typecheck && npm test && npm run test:postgres && npm audit --audit-level=high --omit=dev",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [],
@@ -20,12 +23,16 @@
   "type": "commonjs",
   "devDependencies": {
     "@cucumber/cucumber": "^12.9.0",
+    "@eslint/js": "^10.0.1",
     "@testcontainers/postgresql": "^12.0.1",
     "@types/node": "^25.9.1",
     "@types/pg": "^8.20.0",
+    "eslint": "^10.4.1",
+    "globals": "^17.6.0",
     "testcontainers": "^12.0.1",
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.60.0"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

@@ -1,3 +1,5 @@
+[![Quality Checks](https://github.com/st2f/vehicle-fleet-ddd-cqrs/actions/workflows/ci.yml/badge.svg)](https://github.com/st2f/vehicle-fleet-ddd-cqrs/actions/workflows/ci.yml)
+
 # Vehicle Fleet Parking Management
 
 A TypeScript learning project for modeling a vehicle fleet with BDD, DDD, and CQRS ideas.
@@ -113,6 +115,8 @@ Domain needs: Fleet.register(vehicle)
 Assertion needs: HasVehicleHandler.handle(query)
 ```
 
+---
+
 ## Development Flow
 
 ### Step 1: In-memory behavior
@@ -148,6 +152,8 @@ npx cucumber-js --format html:reports/cucumber.html
 ```
 
 <img width="600" alt="In-memory-DB test results" src="https://github.com/user-attachments/assets/5dab0057-5bf3-4d21-b7cd-b7a9befddd94" />
+
+---
 
 ### Step 2: PostgreSQL persistence
 
@@ -190,7 +196,7 @@ Stop the local database when you are done:
 npm run db:down
 ```
 
-<img width="1328" height="1128" alt="CLI terminal examples" src="https://github.com/user-attachments/assets/b2b87249-0ada-415d-96c6-68c3178041c2" />
+<img width="700" alt="CLI terminal examples" src="https://github.com/user-attachments/assets/b2b87249-0ada-415d-96c6-68c3178041c2" />
 
 You can also set `DATABASE_URL` directly to target another local or remote
 PostgreSQL database.
@@ -218,3 +224,28 @@ npm run test:postgres:colima
 
 Note : database scenarios are intentionally limited because they are much more costly
 than the in-memory scenarios. In this example, PostgreSQL scenarios are roughly 600x slower per scenario than the in-memory scenarios.
+
+---
+
+### Step 3: Quality tools and CI
+
+The project keeps the quality toolchain intentionally small:
+
+- `npm run lint` uses ESLint to catch common TypeScript mistakes and keep the
+  codebase consistent.
+- `npm run typecheck` runs the TypeScript compiler without emitting files, so
+  type errors are caught before runtime.
+- `npm test` runs the fast BDD scenarios against the in-memory repository.
+- `npm run test:postgres` runs only the tagged PostgreSQL scenarios with
+  Testcontainers, which verifies the real persistence behavior without slowing
+  down every test run.
+- `npm audit --audit-level=high --omit=dev` checks production dependencies for
+  high-severity vulnerabilities while avoiding noise from development-only
+  packages.
+
+The GitHub Actions workflow in `.github/workflows/ci.yml` runs the same checks
+on every push to `main` and on pull requests. CI uses `npm ci` for reproducible
+installs and the Docker runtime available on the GitHub runner for
+Testcontainers.
+
+  <img width="800" alt="Workflow run" src="https://github.com/user-attachments/assets/7ec9537c-f478-4e72-b936-cea78a8b114b" />

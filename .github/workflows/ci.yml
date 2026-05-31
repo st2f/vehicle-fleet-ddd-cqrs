@@ -1,0 +1,41 @@
+name: Quality Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run in-memory BDD scenarios
+        run: npm test
+
+      - name: Run PostgreSQL BDD scenarios
+        run: npm run test:postgres
+
+      - name: Audit production dependencies
+        run: npm audit --audit-level=high --omit=dev
