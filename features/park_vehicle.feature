@@ -20,3 +20,10 @@ Feature: Park a vehicle
     And my vehicle has been parked into this location
     When I try to park my vehicle at this location
     Then I should be informed that my vehicle is already parked at this location
+
+  @postgres @persistence
+  Scenario: Vehicle location survives repository reload
+    And a location
+    When I park my vehicle at this location
+    And the fleet repository is reloaded
+    Then the known location of my vehicle should verify this location

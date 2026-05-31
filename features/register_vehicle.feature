@@ -25,3 +25,21 @@ Feature: Register a vehicle
     And this vehicle has been registered into the other user's fleet
     When I register this vehicle into my fleet
     Then this vehicle should be part of my vehicle fleet
+
+  @postgres @persistence
+  Scenario: Vehicle registration survives repository reload
+    Given my fleet
+    And a vehicle
+    When I register this vehicle into my fleet
+    And the fleet repository is reloaded
+    Then this vehicle should be part of my vehicle fleet
+
+  @postgres @persistence
+  Scenario: Same vehicle can belong to more than one persisted fleet
+    Given my fleet
+    And the fleet of another user
+    And a vehicle
+    And this vehicle has been registered into the other user's fleet
+    When I register this vehicle into my fleet
+    And the fleet repository is reloaded
+    Then this vehicle should be part of my vehicle fleet

@@ -6,11 +6,12 @@ The project was built in two steps:
 
 1. First, the behavior was described with Gherkin scenarios and implemented
    with an in-memory repository for fast feedback.
-2. Then, PostgreSQL persistence was added for the CLI.
+2. Then, PostgreSQL persistence was added for the CLI, with separate
+   Testcontainers-backed scenarios for database behavior.
 
-The Cucumber scenarios use `InMemoryFleetRepository`. PostgreSQL lives behind
-the same repository port in `PostgresFleetRepository`, so the application code
-stays the same while the infrastructure changes.
+The default Cucumber scenarios use `InMemoryFleetRepository`. PostgreSQL lives
+behind the same repository port in `PostgresFleetRepository`, so the application
+code stays the same while the infrastructure changes.
 
 ## Current Features
 
@@ -122,8 +123,9 @@ Run the default Cucumber scenarios:
 npm test
 ```
 
-These tests use `InMemoryFleetRepository`, which keeps the feedback loop fast
-and does not require Docker or a database.
+The default Cucumber profile excludes PostgreSQL scenarios. These tests use
+`InMemoryFleetRepository`, which keeps the feedback loop fast and does not
+require Docker or a database.
 
 Useful variants:
 
@@ -149,9 +151,10 @@ npx cucumber-js --format html:reports/cucumber.html
 
 ### Step 2: PostgreSQL persistence
 
-PostgreSQL persistence is used by the CLI for real local data.
+PostgreSQL persistence is used in two places: by the CLI for real local data,
+and by tagged Cucumber scenarios for repository/database verification.
 
-#### CLI persistence
+#### 1. CLI persistence
 
 The CLI supports these commands:
 
@@ -191,3 +194,27 @@ npm run db:down
 
 You can also set `DATABASE_URL` directly to target another local or remote
 PostgreSQL database.
+
+#### 2. Tests persistence
+
+Run the tagged PostgreSQL scenarios:
+
+```sh
+npm run test:postgres
+```
+
+These scenarios start a temporary PostgreSQL database through Testcontainers.
+That database is only used for the test run; it is separate from the local
+database started with `npm run db:up` and is not reused by the CLI.
+
+CI should provide Docker access through its normal environment. If you use Colima
+locally, run:
+
+```sh
+npm run test:postgres:colima
+```
+
+<img width="600" alt="Test results with DB" src="https://github.com/user-attachments/assets/db0fa175-365c-495f-a373-a0af7abc9c02" />
+
+Note : database scenarios are intentionally limited because they are much more costly
+than the in-memory scenarios. In this example, PostgreSQL scenarios are roughly 600x slower per scenario than the in-memory scenarios.

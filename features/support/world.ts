@@ -1,41 +1,91 @@
 import { setWorldConstructor, World } from "@cucumber/cucumber";
 import { Location } from "../../src/Domain/Location";
 import { InMemoryFleetRepository } from "../../src/Infra/InMemoryFleetRepository";
+import { FleetRepository } from "../../src/App/Ports/FleetRepository";
 import { CreateFleetHandler } from "../../src/App/Commands/CreateFleetHandler";
 import { RegisterVehicleHandler } from "../../src/App/Commands/RegisterVehicleHandler";
 import { LocalizeVehicleHandler } from "../../src/App/Commands/LocalizeVehicleHandler";
 import { HasVehicleHandler } from "../../src/App/Queries/HasVehicleHandler";
 import { LocateVehicleHandler } from "../../src/App/Queries/LocateVehicleHandler";
 
+type RepositoryFactory = () => Promise<FleetRepository>;
+type Cleanup = () => Promise<void>;
+
 export class FleetWorld extends World {
-  private readonly fleetRepository = new InMemoryFleetRepository();
+  private fleetRepository: FleetRepository = new InMemoryFleetRepository();
+  private readonly idGenerator = new SequentialIdGenerator();
 
-  private readonly createFleetHandler = new CreateFleetHandler(
+  private createFleetHandler = new CreateFleetHandler(
     this.fleetRepository,
-    new SequentialIdGenerator(),
+    this.idGenerator,
   );
 
-  private readonly registerVehicleHandler = new RegisterVehicleHandler(
-    this.fleetRepository,
-  );
-
-  private readonly localizeVehicleHandler = new LocalizeVehicleHandler(
+  private registerVehicleHandler = new RegisterVehicleHandler(
     this.fleetRepository,
   );
 
-  private readonly hasVehicleHandler = new HasVehicleHandler(
+  private localizeVehicleHandler = new LocalizeVehicleHandler(
     this.fleetRepository,
   );
 
-  private readonly locateVehicleHandler = new LocateVehicleHandler(
+  private hasVehicleHandler = new HasVehicleHandler(
     this.fleetRepository,
   );
+
+  private locateVehicleHandler = new LocateVehicleHandler(
+    this.fleetRepository,
+  );
+
+  private repositoryFactory?: RepositoryFactory;
+  private readonly cleanups: Cleanup[] = [];
 
   myFleetId: string = "";
   otherFleetId: string = "";
   vehiclePlateNumber: string = "";
   location?: Location;
   caughtError?: unknown;
+
+  useRepository(
+    fleetRepository: FleetRepository,
+    repositoryFactory?: RepositoryFactory,
+  ): void {
+    this.fleetRepository = fleetRepository;
+    this.repositoryFactory = repositoryFactory;
+    this.createFleetHandler = new CreateFleetHandler(
+      this.fleetRepository,
+      this.idGenerator,
+    );
+    this.registerVehicleHandler = new RegisterVehicleHandler(
+      this.fleetRepository,
+    );
+    this.localizeVehicleHandler = new LocalizeVehicleHandler(
+      this.fleetRepository,
+    );
+    this.hasVehicleHandler = new HasVehicleHandler(this.fleetRepository);
+    this.locateVehicleHandler = new LocateVehicleHandler(this.fleetRepository);
+  }
+
+  async reloadRepository(): Promise<void> {
+    if (this.repositoryFactory === undefined) {
+      return;
+    }
+
+    this.useRepository(
+      await this.repositoryFactory(),
+      this.repositoryFactory,
+    );
+  }
+
+  addCleanup(cleanup: Cleanup): void {
+    this.cleanups.push(cleanup);
+  }
+
+  async cleanup(): Promise<void> {
+    while (this.cleanups.length > 0) {
+      const cleanup = this.cleanups.pop()!;
+      await cleanup();
+    }
+  }
 
   async createMyFleet(): Promise<void> {
     this.myFleetId = await this.createFleetHandler.handle({ userId: "user-1" });
