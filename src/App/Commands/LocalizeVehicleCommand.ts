@@ -1,4 +1,4 @@
-export type MoveVehicleCommand = {
+export type LocalizeVehicleCommand = {
   fleetId: string;
   vehiclePlateNumber: string;
   latitude: number;

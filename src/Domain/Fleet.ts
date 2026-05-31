@@ -19,6 +19,20 @@ export class Fleet {
     return new Fleet(id, userId);
   }
 
+  static reconstitute(snapshot: FleetSnapshot): Fleet {
+    const fleet = new Fleet(snapshot.id, snapshot.userId);
+
+    for (const vehicle of snapshot.vehicles) {
+      fleet.vehicles.add(vehicle.plateNumber);
+
+      if (vehicle.location !== undefined) {
+        fleet.vehicleLocations.set(vehicle.plateNumber, vehicle.location);
+      }
+    }
+
+    return fleet;
+  }
+
   register(vehicle: Vehicle): void {
     const plateNumber = vehicle.licensePlate;
 
@@ -65,4 +79,26 @@ export class Fleet {
   currentLocationOf(vehicle: Vehicle): Location | undefined {
     return this.vehicleLocations.get(vehicle.licensePlate);
   }
+
+  toSnapshot(): FleetSnapshot {
+    return {
+      id: this.id,
+      userId: this.userId,
+      vehicles: [...this.vehicles].map((plateNumber) => ({
+        plateNumber,
+        location: this.vehicleLocations.get(plateNumber),
+      })),
+    };
+  }
 }
+
+export type FleetSnapshot = {
+  id: string;
+  userId: string;
+  vehicles: VehicleSnapshot[];
+};
+
+type VehicleSnapshot = {
+  plateNumber: string;
+  location?: Location;
+};

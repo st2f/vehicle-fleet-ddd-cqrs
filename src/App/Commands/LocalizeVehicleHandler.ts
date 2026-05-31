@@ -2,12 +2,12 @@ import { Location } from "../../Domain/Location";
 import { Vehicle } from "../../Domain/Vehicle";
 import { FleetNotFoundError } from "../errors";
 import { FleetRepository } from "../Ports/FleetRepository";
-import { MoveVehicleCommand } from "./MoveVehicleCommand";
+import { LocalizeVehicleCommand } from "./LocalizeVehicleCommand";
 
-export class MoveVehicleHandler {
+export class LocalizeVehicleHandler {
   constructor(private readonly fleetRepository: FleetRepository) {}
 
-  async handle(command: MoveVehicleCommand): Promise<void> {
+  async handle(command: LocalizeVehicleCommand): Promise<void> {
     const fleet = await this.fleetRepository.findById(command.fleetId);
 
     if (fleet === undefined) {

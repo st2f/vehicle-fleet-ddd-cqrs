@@ -1,9 +1,12 @@
 {
   "name": "vehicle-fleet-ddd-cqrs",
+  "private": true,
   "version": "1.0.0",
-  "description": "This is a work in progress as I move along with this project",
+  "description": "TypeScript fleet management exercise using DDD-style aggregates, command handlers, Cucumber scenarios and PostgreSQL persistence.",
   "main": "dist/index.js",
   "scripts": {
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
     "test": "cucumber-js",
     "test:critical": "cucumber-js --tags @critical",
     "typecheck": "tsc --noEmit"
@@ -15,7 +18,12 @@
   "devDependencies": {
     "@cucumber/cucumber": "^12.9.0",
     "@types/node": "^25.9.1",
+    "@types/pg": "^8.20.0",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "pg": "^8.21.0"
   }
 }

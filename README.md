@@ -2,26 +2,21 @@
 
 A TypeScript learning project for modeling a vehicle fleet with BDD, DDD, and CQRS ideas.
 
-The behavior is described first with Gherkin scenarios in `features/*.feature`, then implemented through thin Cucumber step definitions, a scenario `World`, application command/query handlers, an in-memory repository, and a small domain model.
+The project was built in two steps:
 
-This first version deliberately avoids database persistence. Storage is handled by `InMemoryFleetRepository` so the use cases and domain rules can be designed before introducing a real database.
+1. First, the behavior was described with Gherkin scenarios and implemented
+   with an in-memory repository for fast feedback.
+2. Then, PostgreSQL persistence was added for the CLI.
 
-## What The App Models
+The Cucumber scenarios use `InMemoryFleetRepository`. PostgreSQL lives behind
+the same repository port in `PostgresFleetRepository`, so the application code
+stays the same while the infrastructure changes.
 
-Current behavior:
+## Current Features
 
-- create a fleet for a user
-- register a vehicle in a fleet
-- prevent registering the same vehicle twice in the same fleet
-- allow the same vehicle to belong to another fleet
-- park a registered vehicle at a location
-- prevent parking a vehicle twice at the same location
-- retrieve the current location of a vehicle
-
-Feature files:
-
-- `features/register_vehicle.feature`
-- `features/park_vehicle.feature`
+- create fleets and register vehicles
+- localize vehicles and retrieve their current location
+- prevent duplicate vehicle registration and duplicate parking positions
 
 ## Project Shape
 
@@ -39,7 +34,8 @@ src/App/
   Ports/                       # Interfaces used by the application layer
 
 src/Domain/                    # Fleet, Vehicle, Location, domain errors
-src/Infra/                     # In-memory repository implementation
+src/Infra/                     # In-memory and PostgreSQL repository implementations
+src/Cli/                       # Command line entrypoint and argument parsing
 ```
 
 The flow of a scenario is:
@@ -116,23 +112,26 @@ Domain needs: Fleet.register(vehicle)
 Assertion needs: HasVehicleHandler.handle(query)
 ```
 
-## Commands
+## Development Flow
 
-Run all Cucumber scenarios:
+### Step 1: In-memory behavior
+
+Run the default Cucumber scenarios:
 
 ```sh
 npm test
 ```
 
-Run critical scenarios only:
+These tests use `InMemoryFleetRepository`, which keeps the feedback loop fast
+and does not require Docker or a database.
+
+Useful variants:
 
 ```sh
+# run critical scenarios only
 npm run test:critical
-```
 
-Run the TypeScript compiler without emitting files:
-
-```sh
+# run the TypeScript compiler without emitting files
 npm run typecheck
 ```
 
@@ -142,22 +141,53 @@ Useful Cucumber output formats:
 # readable scenario-by-scenario CLI output
 npx cucumber-js --format pretty
 
-# progress bar in the terminal
-npx cucumber-js --format progress-bar
-
 # HTML report
 npx cucumber-js --format html:reports/cucumber.html
-
-# CI-friendly JUnit output
-npx cucumber-js --format junit:reports/cucumber.xml
-
-# see which step definitions are used
-npx cucumber-js --dry-run --format usage
-
-# print failing scenario locations for re-runs
-npx cucumber-js --format rerun:reports/rerun.txt
 ```
 
-## Test Results
+<img width="600" alt="In-memory-DB test results" src="https://github.com/user-attachments/assets/5dab0057-5bf3-4d21-b7cd-b7a9befddd94" />
 
-<img width="600" alt="image" src="https://github.com/user-attachments/assets/5dab0057-5bf3-4d21-b7cd-b7a9befddd94" />
+### Step 2: PostgreSQL persistence
+
+PostgreSQL persistence is used by the CLI for real local data.
+
+#### CLI persistence
+
+The CLI supports these commands:
+
+```sh
+./fleet create <userId>
+./fleet register-vehicle <fleetId> <vehiclePlateNumber>
+./fleet localize-vehicle <fleetId> <vehiclePlateNumber> lat lng [alt]
+```
+
+Without database configuration, each CLI invocation uses a fresh in-memory
+repository. That is useful for exercising a single command, but data will not be
+shared between separate `./fleet` calls.
+
+To make CLI data persistent, create a local `.env` from `.env.example` and start
+the local PostgreSQL database:
+
+```sh
+cp .env.example .env
+npm run db:up
+```
+
+Then data created by one command can be reused by the next command:
+
+```sh
+fleetId=$(./fleet create user-1)
+./fleet register-vehicle "$fleetId" AA-123-BB
+./fleet localize-vehicle "$fleetId" AA-123-BB 48.8566 2.3522
+```
+
+Stop the local database when you are done:
+
+```sh
+npm run db:down
+```
+
+<img width="1328" height="1128" alt="CLI terminal examples" src="https://github.com/user-attachments/assets/b2b87249-0ada-415d-96c6-68c3178041c2" />
+
+You can also set `DATABASE_URL` directly to target another local or remote
+PostgreSQL database.

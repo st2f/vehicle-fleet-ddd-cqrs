@@ -3,7 +3,7 @@ import { Location } from "../../src/Domain/Location";
 import { InMemoryFleetRepository } from "../../src/Infra/InMemoryFleetRepository";
 import { CreateFleetHandler } from "../../src/App/Commands/CreateFleetHandler";
 import { RegisterVehicleHandler } from "../../src/App/Commands/RegisterVehicleHandler";
-import { MoveVehicleHandler } from "../../src/App/Commands/MoveVehicleHandler";
+import { LocalizeVehicleHandler } from "../../src/App/Commands/LocalizeVehicleHandler";
 import { HasVehicleHandler } from "../../src/App/Queries/HasVehicleHandler";
 import { LocateVehicleHandler } from "../../src/App/Queries/LocateVehicleHandler";
 
@@ -19,7 +19,7 @@ export class FleetWorld extends World {
     this.fleetRepository,
   );
 
-  private readonly moveVehicleHandler = new MoveVehicleHandler(
+  private readonly localizeVehicleHandler = new LocalizeVehicleHandler(
     this.fleetRepository,
   );
 
@@ -87,7 +87,7 @@ export class FleetWorld extends World {
   }
 
   async parkMyVehicleAtLocation(): Promise<void> {
-    await this.moveVehicleHandler.handle({
+    await this.localizeVehicleHandler.handle({
       fleetId: this.myFleetId,
       vehiclePlateNumber: this.vehiclePlateNumber,
       latitude: this.location!.latitude,
