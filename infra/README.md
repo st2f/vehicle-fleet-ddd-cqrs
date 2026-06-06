@@ -10,8 +10,9 @@
 | ✅     | Terraform backend   |
 | ✅     | OIDC authentication |
 | ✅     | Smoke test          |
-| 🚧     | ECR repository      |
+| ✅     | ECR repository      |
 | 🚧     | Reports bucket      |
+| 🚧     | GitHub image push   |
 
 This folder contains the Terraform configuration used to provision and manage
 the AWS infrastructure for this learning project. The setup starts with the foundations:
@@ -138,11 +139,43 @@ Terraform successfully created the smoke-test parameter and applied the default 
 The workflow validates the same Terraform workflow used locally: init, validate and plan.
 The difference is that local runs use the current AWS identity, while GitHub Actions authenticates through OIDC and assumes the github-ci-role.
 
-<img width="700" alt="GitHub Action results" src="https://github.com/user-attachments/assets/42e54dc1-a2a6-4010-a26c-96b630c02f0d" />
+<img width="700" alt="GitHub CI results" src="https://github.com/user-attachments/assets/42e54dc1-a2a6-4010-a26c-96b630c02f0d" />
 
 ## 4. Container registry
 
-TODO manage an ECR repository for container images
+Terraform manages an ECR repository used to store application container images.
+
+The repository enables:
+
+- pushing Docker images from CI
+- pulling images for future deployment targets
+- scanning images on push
+- expiring old images with a lifecycle policy
+
+---
+
+For learning purposes, `terraform apply` is still run locally with the current AWS terminal identity
+
+<img width="600" alt="terraform apply" src="https://github.com/user-attachments/assets/f8b2f437-4869-4424-b6ac-9e0032f2c2e2" />
+
+<img width="600" alt="ECR lifecycle policy" src="https://github.com/user-attachments/assets/f8bf9684-942f-4160-951e-0ed94386e008" />
+
+### Resources
+
+| Type                 | Name              | Purpose                       |
+| -------------------- | ----------------- | ----------------------------- |
+| ECR Repository       | ecr-repo-practice | Store application images      |
+| ECR Lifecycle Policy | ecr-repo-practice | Expire old application images |
+
+### Access and permissions
+
+For now, the ECR read policy is attached manually to the CI role
+
+| Source         | Permission / Policy       | Target                             |
+| -------------- | ------------------------- | ---------------------------------- |
+| github-ci-role | policy-ecr-terraform-plan | ECR repository `ecr-repo-practice` |
+
+<img width="700" alt="GitHub CI results" src="https://github.com/user-attachments/assets/25c48510-c948-4e51-ab65-b6c9a7b25933" />
 
 ## 5. Reports storage
 
