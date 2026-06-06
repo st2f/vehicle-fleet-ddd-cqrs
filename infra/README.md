@@ -1,14 +1,27 @@
+[![Terraform](https://github.com/st2f/vehicle-fleet-ddd-cqrs/actions/workflows/terraform.yml/badge.svg?branch=experiment%2Faws-ci-ecr-s3)](https://github.com/st2f/vehicle-fleet-ddd-cqrs/actions/workflows/terraform.yml)
+
 # Terraform infrastructure
 
-This folder contains the Terraform configuration used to learn and manage the
-AWS infrastructure for this project. The setup starts with the foundations:
+## Current progress
+
+| Status | Step                |
+| ------ | ------------------- |
+| ✅     | AWS bootstrap       |
+| ✅     | Terraform backend   |
+| ✅     | OIDC authentication |
+| ✅     | Smoke test          |
+| 🚧     | ECR repository      |
+| 🚧     | Reports bucket      |
+
+This folder contains the Terraform configuration used to provision and manage
+the AWS infrastructure for this learning project. The setup starts with the foundations:
 where Terraform stores its state, how changes are locked, and how CI gets
 temporary AWS access without storing long-lived secrets.
 
 The work is split into small steps so each concept can be tested before adding
 real application infrastructure.
 
-## 1. Bootstrap AWS
+## 1. AWS bootstrap
 
 Done manually before Terraform can run. This step teaches the infrastructure
 foundation Terraform depends on:
@@ -122,7 +135,10 @@ Terraform successfully created the smoke-test parameter and applied the default 
 
 ## 3. GitHub Actions
 
-TODO terraform validation workflow
+The workflow validates the same Terraform workflow used locally: init, validate and plan.
+The difference is that local runs use the current AWS identity, while GitHub Actions authenticates through OIDC and assumes the github-ci-role.
+
+<img width="700" alt="GitHub Action results" src="https://github.com/user-attachments/assets/42e54dc1-a2a6-4010-a26c-96b630c02f0d" />
 
 ## 4. Container registry
 
