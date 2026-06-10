@@ -2,57 +2,17 @@
 
 # Terraform infrastructure
 
-## Current progress
+## Sections
 
-| Status | Step                |
-| ------ | ------------------- |
-| ✅     | AWS bootstrap       |
-| ✅     | Terraform backend   |
-| ✅     | OIDC authentication |
-| ✅     | Smoke test          |
-| ✅     | ECR repository      |
-| 🚧     | Reports bucket      |
-| 🚧     | GitHub image push   |
+- [Bootstrap infrastructure](bootstrap/README.md)
+- [Terraform smoke test](#1-terraform-smoke-test)
+- [GitHub Actions](#2-github-actions)
+- [Container registry](#3-container-registry)
+- [Reports storage](#4-reports-storage)
+- [App health/version runtime](#5-app-healthversion-runtime)
+- [CI image pipeline](#6-ci-image-pipeline)
 
-This folder contains the Terraform configuration used to provision and manage
-the AWS infrastructure for this learning project. The setup starts with the foundations:
-where Terraform stores its state, how changes are locked, and how CI gets
-temporary AWS access without storing long-lived secrets.
-
-The work is split into small steps so each concept can be tested before adding
-real application infrastructure.
-
-## 1. AWS bootstrap
-
-Done manually before Terraform can run. This step teaches the infrastructure
-foundation Terraform depends on:
-
-- Terraform remote state stores the shared infrastructure state in S3 instead
-  of only on one local machine.
-- S3 lockfile support prevents two Terraform runs from changing the same state
-  at the same time (backend.tf / `use_lockfile = true`).
-- The GitHub OIDC provider lets GitHub Actions request temporary AWS credentials
-  without storing an AWS access key in GitHub.
-- The IAM role defines what GitHub Actions is allowed to do after it authenticates.
-
-### Resources
-
-| Type          | Name                                | Purpose                        |
-| ------------- | ----------------------------------- | ------------------------------ |
-| OIDC Provider | token.actions.githubusercontent.com | GitHub identity provider       |
-| IAM Role      | github-ci-role                      | Role assumed by GitHub Actions |
-| S3 Bucket     | terraform-state                     | Terraform remote state         |
-| SSM Parameter | terraform-smoke-test                | Terraform smoke test           |
-
-### Access and permissions
-
-| Source                       | Permission / Policy             | Target               |
-| ---------------------------- | ------------------------------- | -------------------- |
-| GitHub Actions (`repo-name`) | AssumeRoleWithWebIdentity       | github-ci-role       |
-| github-ci-role               | policy-s3-terraform-state       | terraform-state      |
-| github-ci-role               | policy-ssm-terraform-smoke-test | terraform-smoke-test |
-
-## 2. Terraform smoke test
+## 1. Terraform smoke test
 
 The goal is to create one small SSM parameter to prove that AWS access,
 remote state, locking, provider tags, and state tracking work.
@@ -82,12 +42,6 @@ Initialize Terraform:
 
 ```sh
 terraform init
-```
-
-If the backend configuration changes, reinitialize with:
-
-```sh
-terraform init -reconfigure
 ```
 
 Validate the configuration:
@@ -134,14 +88,14 @@ Terraform successfully created the smoke-test parameter and applied the default 
 
 <img width="700" alt="aws param store" src="https://github.com/user-attachments/assets/96a079dc-1dfd-4354-9218-91f95efacba9" />
 
-## 3. GitHub Actions
+## 2. GitHub Actions
 
 The workflow validates the same Terraform workflow used locally: init, validate and plan.
 The difference is that local runs use the current AWS identity, while GitHub Actions authenticates through OIDC and assumes the github-ci-role.
 
 <img width="700" alt="GitHub CI results" src="https://github.com/user-attachments/assets/42e54dc1-a2a6-4010-a26c-96b630c02f0d" />
 
-## 4. Container registry
+## 3. Container registry
 
 Terraform manages an ECR repository used to store application container images.
 
@@ -167,16 +121,61 @@ For learning purposes, `terraform apply` is still run locally with the current A
 | ECR Repository       | ecr-repo-practice | Store application images      |
 | ECR Lifecycle Policy | ecr-repo-practice | Expire old application images |
 
-### Access and permissions
-
-For now, the ECR read policy is attached manually to the CI role
-
-| Source         | Permission / Policy       | Target                             |
-| -------------- | ------------------------- | ---------------------------------- |
-| github-ci-role | policy-ecr-terraform-plan | ECR repository `ecr-repo-practice` |
-
 <img width="700" alt="GitHub CI results" src="https://github.com/user-attachments/assets/25c48510-c948-4e51-ab65-b6c9a7b25933" />
 
-## 5. Reports storage
+## 4. Reports storage
 
-TODO manage an S3 bucket for generated reports/artifacts
+Terraform now manages an S3 bucket used to store generated CI reports and
+artifacts. The reports bucket enables:
+
+- uploading Cucumber or test reports from GitHub Actions
+- keeping reports private by blocking public access
+- encrypting report objects with S3-managed encryption
+- preserving object versions while the bucket is active
+- expiring old reports automatically with a lifecycle rule
+- granting the GitHub CI role write access only under the `reports/` prefix
+
+The bucket name and ARN are defined with Terraform locals so the generated plan
+shows the exact S3 target before applying:
+
+```hcl
+locals {
+  ci_reports_bucket_name = "ci-practice-reports-${data.aws_caller_identity.current.account_id}"
+  ci_reports_bucket_arn  = "arn:aws:s3:::${local.ci_reports_bucket_name}"
+}
+```
+
+### Resources
+
+| Type                        | Name                        | Purpose                      |
+| --------------------------- | --------------------------- | ---------------------------- |
+| S3 Bucket                   | ci-practice-reports-ACCOUNT | Store generated CI reports   |
+| S3 Public Access Block      | ci_reports                  | Keep the bucket private      |
+| S3 Encryption Configuration | ci_reports                  | Encrypt report objects       |
+| S3 Versioning Configuration | ci_reports                  | Keep object versions         |
+| S3 Lifecycle Configuration  | expire-old-ci-reports       | Expire reports after 30 days |
+| IAM Policy                  | policy-s3-ci-reports-write  | Allow CI report uploads      |
+| IAM Role Policy Attachment  | github_ci_reports_write     | Attach report upload policy  |
+
+### Access and permissions
+
+| Source         | Permission / Policy        | Target                                  |
+| -------------- | -------------------------- | --------------------------------------- |
+| github-ci-role | policy-s3-ci-reports-write | `ci-practice-reports-ACCOUNT/reports/*` |
+
+## 5. App health/version runtime
+
+TODO minimal HTTP endpoint for image verification (minimal HTTP runtime with `/health` and `/version`)
+
+## 6. CI image pipeline
+
+TODO
+
+Once infra is in place, turn the ECR repository into a real delivery checkpoint.
+
+1. Run quality checks and generate a test report.
+2. Upload the report to the reports S3 bucket.
+3. Build a Docker image only after tests succeed.
+4. Start the image inside CI and verify it with `curl /health` or `curl /version`.
+5. Push the image to ECR only after the image has been proven runnable.
+6. Tag the image with the Git commit SHA for traceability.
