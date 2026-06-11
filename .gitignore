@@ -9,3 +9,8 @@
 .idea
 *.log
 *.tsbuildinfo
+
+# Terraform local working files/state
+**/.terraform/*
+*.tfstate
+*.tfstate.*

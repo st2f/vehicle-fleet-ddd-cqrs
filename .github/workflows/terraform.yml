@@ -1,0 +1,49 @@
+name: Terraform
+
+on:
+  pull_request:
+    branches:
+      - "infra/**"
+    paths:
+      - "infra/*.tf"
+      - "infra/README.md"
+      - "infra/TABLES.md"
+      - ".github/workflows/terraform.yml"
+  push:
+    branches:
+      - "infra/**"
+    paths:
+      - "infra/*.tf"
+      - "infra/README.md"
+      - "infra/TABLES.md"
+      - ".github/workflows/terraform.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: arn:aws:iam::535337619181:role/github-ci-role
+          aws-region: eu-north-1
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        working-directory: infra
+        run: terraform init
+
+      - name: Terraform validate
+        working-directory: infra
+        run: terraform validate
+
+      - name: Terraform plan
+        working-directory: infra
+        run: terraform plan

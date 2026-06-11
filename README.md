@@ -249,3 +249,9 @@ installs and the Docker runtime available on the GitHub runner for
 Testcontainers.
 
   <img width="800" alt="Workflow run" src="https://github.com/user-attachments/assets/7ec9537c-f478-4e72-b936-cea78a8b114b" />
+
+## Infrastructure and Delivery
+
+The optional AWS/Terraform delivery track is documented in
+[infra/README.md](infra/README.md). It covers Terraform state, GitHub OIDC,
+CI reports, ECR, and container image verification.
