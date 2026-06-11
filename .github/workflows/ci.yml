@@ -2,15 +2,22 @@ name: Quality Checks
 
 on:
   push:
-    branches: [main]
   pull_request:
 
 permissions:
   contents: read
+  id-token: write
+
+env:
+  AWS_REGION: eu-north-1
+  ECR_REPOSITORY: ecr-repo-practice
+  IMAGE_NAME: vehicle-fleet-ddd-cqrs
 
 jobs:
   quality:
     runs-on: ubuntu-latest
+    env:
+      PUBLISH_TO_AWS: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/tests/')) }}
 
     steps:
       - name: Checkout
@@ -32,10 +39,65 @@ jobs:
         run: npm run typecheck
 
       - name: Run in-memory BDD scenarios
-        run: npm test
+        run: npm run test:report
 
       - name: Run PostgreSQL BDD scenarios
-        run: npm run test:postgres
+        run: npm run test:postgres:report
 
       - name: Audit production dependencies
         run: npm audit --audit-level=high --omit=dev
+
+      - name: Configure AWS credentials
+        if: env.PUBLISH_TO_AWS == 'true'
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::535337619181:role/github-ci-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Resolve AWS account
+        if: env.PUBLISH_TO_AWS == 'true'
+        id: aws-account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Cucumber reports
+        if: env.PUBLISH_TO_AWS == 'true'
+        run: aws s3 cp reports "s3://ci-practice-reports-${{ steps.aws-account.outputs.id }}/reports/${GITHUB_SHA}/" --recursive
+
+      - name: Build Docker image
+        run: docker build --tag "$IMAGE_NAME:$GITHUB_SHA" .
+
+      - name: Start Docker image
+        run: docker run --detach --name fleet-runtime --publish 3000:3000 --env APP_VERSION="$GITHUB_SHA" "$IMAGE_NAME:$GITHUB_SHA"
+
+      - name: Verify Docker image
+        run: |
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl --fail --silent --show-error http://localhost:3000/health; then
+              echo
+              curl --fail --silent --show-error http://localhost:3000/version
+              echo
+              exit 0
+            fi
+
+            sleep 1
+          done
+
+          docker logs fleet-runtime
+          exit 1
+
+      - name: Stop Docker image
+        if: always()
+        run: docker rm --force fleet-runtime || true
+
+      - name: Login to Amazon ECR
+        if: env.PUBLISH_TO_AWS == 'true'
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Push Docker image to ECR
+        if: env.PUBLISH_TO_AWS == 'true'
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          docker tag "$IMAGE_NAME:$GITHUB_SHA" "$ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA"

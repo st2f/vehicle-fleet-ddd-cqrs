@@ -62,18 +62,6 @@ Apply the planned change:
 terraform apply
 ```
 
-After applying, run a final plan:
-
-```sh
-terraform plan
-```
-
-It should show:
-
-```text
-No changes. Your infrastructure matches the configuration.
-```
-
 The smoke test verifies that:
 
 - Terraform can initialize with the S3 backend.
@@ -157,12 +145,6 @@ locals {
 | IAM Policy                  | policy-s3-ci-reports-write  | Allow CI report uploads      |
 | IAM Role Policy Attachment  | github_ci_reports_write     | Attach report upload policy  |
 
-### Access and permissions
-
-| Source         | Permission / Policy        | Target                                  |
-| -------------- | -------------------------- | --------------------------------------- |
-| github-ci-role | policy-s3-ci-reports-write | `ci-practice-reports-ACCOUNT/reports/*` |
-
 ## 5. App health/version runtime
 
 The application exposes a minimal HTTP runtime so a container image can be
@@ -170,10 +152,10 @@ started and verified before it is pushed or deployed.
 
 The runtime intentionally has only two endpoints:
 
-| Method | Path       | Purpose                       |
-| ------ | ---------- | ----------------------------- |
-| GET    | `/health`  | Prove the process is running  |
-| GET    | `/version` | Report the running app build  |
+| Method | Path       | Purpose                      |
+| ------ | ---------- | ---------------------------- |
+| GET    | `/health`  | Prove the process is running |
+| GET    | `/version` | Report the running app build |
 
 Run it locally from TypeScript:
 
@@ -198,11 +180,11 @@ curl http://localhost:3000/version
 Expected responses:
 
 ```json
-{"status":"ok"}
+{ "status": "ok" }
 ```
 
 ```json
-{"name":"vehicle-fleet-ddd-cqrs","version":"1.0.0"}
+{ "name": "vehicle-fleet-ddd-cqrs", "version": "1.0.0" }
 ```
 
 The port defaults to `3000` and can be overridden with `PORT`. The reported
@@ -211,13 +193,43 @@ version.
 
 ## 6. CI image pipeline
 
-TODO
+The CI workflow now turns the ECR repository into a delivery checkpoint.
 
-Once infra is in place, turn the ECR repository into a real delivery checkpoint.
+### Resources
 
-1. Run quality checks and generate a test report.
-2. Upload the report to the reports S3 bucket.
-3. Build a Docker image only after tests succeed.
-4. Start the image inside CI and verify it with `curl /health` or `curl /version`.
-5. Push the image to ECR only after the image has been proven runnable.
-6. Tag the image with the Git commit SHA for traceability.
+| Type                       | Name                     | Purpose                     |
+| -------------------------- | ------------------------ | --------------------------- |
+| IAM Policy                 | policy-ecr-ci-image-push | Allow CI to push ECR images |
+| IAM Role Policy Attachment | github_ci_ecr_push       | Attach ECR push permission  |
+
+### Pipeline
+
+1. Install dependencies with `npm ci`.
+2. Run linting and TypeScript checks.
+3. Run the in-memory and PostgreSQL BDD scenarios while generating HTML reports.
+4. Upload reports under:
+
+   ```text
+   s3://ci-practice-reports-ACCOUNT/reports/GIT_SHA/
+   ```
+
+5. Build the Docker image.
+6. Start the image inside the GitHub runner.
+7. Verify the image with:
+
+   ```sh
+   curl http://localhost:3000/health
+   curl http://localhost:3000/version
+   ```
+
+8. Tag and push the verified image to ECR:
+
+   ```text
+   ACCOUNT.dkr.ecr.eu-north-1.amazonaws.com/ecr-repo-practice:GIT_SHA
+   ```
+
+### Results
+
+<img width="800" alt="AWS S3 Test Reports" src="https://github.com/user-attachments/assets/38a910d2-90f9-42dd-82e5-a3f03a09cb98" />
+
+<img width="800" alt="AWS Elastic Container Repository" src="https://github.com/user-attachments/assets/14aa83ed-3754-4070-b2ca-6c180a378b89" />

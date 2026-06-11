@@ -27,11 +27,11 @@ This is the infrastructure foundation Terraform depends on:
 
 ### Access and permissions
 
-| Source                       | Permission / Policy                  | Target                                              |
-| ---------------------------- | ------------------------------------ | --------------------------------------------------- |
-| GitHub Actions (`repo-name`) | AssumeRoleWithWebIdentity            | github-ci-role                                      |
-| github-ci-role               | policy-s3-terraform-state            | terraform-state-stef                                |
-| github-ci-role               | policy-github-ci-terraform-plan-read | S3/ECR/SSM/IAM resources refreshed by `infra` plan  |
+| Source                       | Permission / Policy                  | Target                                             |
+| ---------------------------- | ------------------------------------ | -------------------------------------------------- |
+| GitHub Actions (`repo-name`) | AssumeRoleWithWebIdentity            | github-ci-role                                     |
+| github-ci-role               | policy-s3-terraform-state            | terraform-state-stef                               |
+| github-ci-role               | policy-github-ci-terraform-plan-read | S3/ECR/SSM/IAM resources refreshed by `infra` plan |
 
 CI does not run this folder. Apply it locally with an admin AWS identity:
 
