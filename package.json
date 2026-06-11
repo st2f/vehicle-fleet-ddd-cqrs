@@ -7,7 +7,10 @@
   "scripts": {
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
+    "build": "tsc",
     "lint": "eslint .",
+    "serve": "ts-node src/Http/main.ts",
+    "start": "node dist/src/Http/main.js",
     "test": "cucumber-js",
     "test:critical": "cucumber-js --tags @critical",
     "test:postgres": "cucumber-js --profile postgres",

@@ -165,7 +165,49 @@ locals {
 
 ## 5. App health/version runtime
 
-TODO minimal HTTP endpoint for image verification (minimal HTTP runtime with `/health` and `/version`)
+The application exposes a minimal HTTP runtime so a container image can be
+started and verified before it is pushed or deployed.
+
+The runtime intentionally has only two endpoints:
+
+| Method | Path       | Purpose                       |
+| ------ | ---------- | ----------------------------- |
+| GET    | `/health`  | Prove the process is running  |
+| GET    | `/version` | Report the running app build  |
+
+Run it locally from TypeScript:
+
+```sh
+npm run serve
+```
+
+Or run the compiled entrypoint, which is what a container image should use:
+
+```sh
+npm run build
+npm start
+```
+
+Verify the runtime:
+
+```sh
+curl http://localhost:3000/health
+curl http://localhost:3000/version
+```
+
+Expected responses:
+
+```json
+{"status":"ok"}
+```
+
+```json
+{"name":"vehicle-fleet-ddd-cqrs","version":"1.0.0"}
+```
+
+The port defaults to `3000` and can be overridden with `PORT`. The reported
+version comes from `APP_VERSION` when set, otherwise from the npm package
+version.
 
 ## 6. CI image pipeline
 
